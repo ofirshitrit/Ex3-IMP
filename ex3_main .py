@@ -17,10 +17,10 @@ def lkDemo(img_path):
     img_1 = cv2.resize(img_1, (0, 0), fx=.5, fy=0.5)
     t = np.array([[1, 0, -.2],
                   [0, 1, -.1],
-                  [0, 0, 1]], dtype=np.float)
+                  [0, 0, 1]], dtype=np.float64)
     img_2 = cv2.warpPerspective(img_1, t, img_1.shape[::-1])
     st = time.time()
-    pts, uv = opticalFlow(img_1.astype(np.float), img_2.astype(np.float), step_size=20, win_size=5)
+    pts, uv = opticalFlow(img_1.astype(np.float64), img_2.astype(np.float64), step_size=20, win_size=5)
     et = time.time()
 
     print("Time: {:.4f}".format(et - st))
@@ -37,6 +37,30 @@ def hierarchicalkDemo(img_path):
     :return:
     """
     print("Hierarchical LK Demo")
+    im1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
+    im1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    im1 = cv2.resize(im1, (0, 0), fx=.5, fy=0.5)
+    t = np.array([[1, 0, -.2],
+                  [0, 1, -.1],
+                  [0, 0, 1]], dtype=np.float64)
+    im2 = cv2.warpPerspective(im1, t, (im1.shape[1], im1.shape[0]))
+
+    ans = opticalFlowPyrLK(im1.astype(np.float64), im2.astype(np.float64), 4, 20, 5)
+
+    pts = np.array([])
+    uv = np.array([])
+    for i in range(ans.shape[0]):
+        for j in range(ans.shape[1]):
+            if ans[i][j][1] != 0 and ans[i][j][0] != 0:
+                uv = np.append(uv, ans[i][j][0])
+                uv = np.append(uv, ans[i][j][1])
+                pts = np.append(pts, j)
+                pts = np.append(pts, i)
+    pts = pts.reshape(int(pts.shape[0] / 2), 2)
+    uv = uv.reshape(int(uv.shape[0] / 2), 2)
+    print(np.median(uv, 0))
+    print(np.mean(uv, 0))
+    displayOpticalFlow(im2, pts, uv)
 
     pass
 
@@ -53,11 +77,21 @@ def compareLK(img_path):
     pass
 
 
-def displayOpticalFlow(img: np.ndarray, pts: np.ndarray, uvs: np.ndarray):
-    plt.imshow(img, cmap='gray')
-    plt.quiver(pts[:, 0], pts[:, 1], uvs[:, 0], uvs[:, 1], color='r')
+# def displayOpticalFlow(img: np.ndarray, pts: np.ndarray, uvs: np.ndarray):
+#     plt.imshow(img, cmap='gray')
+#     plt.quiver(pts[:, 0], pts[:, 1], uvs[:, 0], uvs[:, 1], color='r')
+#
+#     plt.show()
 
+def displayOpticalFlow(image, points, flow):
+    plt.imshow(image, cmap='gray')
+    points_arr = np.array(points)
+    flow_arr = np.array(flow)
+    u = flow_arr[:, 0]
+    v = flow_arr[:, 1]
+    plt.quiver(points_arr[:, 0], points_arr[:, 1], u, v, color='r')
     plt.show()
+
 
 
 # ---------------------------------------------------------------------------
@@ -148,16 +182,16 @@ def blendDemo():
 def main():
     print("ID:", myID())
 
-    img_path = 'input/boxMan.jpg'
-    lkDemo(img_path)
+    img_path = 'input/boxMan .jpg'
+    # lkDemo(img_path)
     hierarchicalkDemo(img_path)
-    compareLK(img_path)
-
-    imageWarpingDemo(img_path)
-
-    pyrGaussianDemo('input/pyr_bit.jpg')
-    pyrLaplacianDemo('input/pyr_bit.jpg')
-    blendDemo()
+    # compareLK(img_path)
+    #
+    # imageWarpingDemo(img_path)
+    #
+    # pyrGaussianDemo('input/pyr_bit.jpg')
+    # pyrLaplacianDemo('input/pyr_bit.jpg')
+    # blendDemo()
 
 
 if __name__ == '__main__':
