@@ -73,7 +73,53 @@ def compareLK(img_path):
     :return:
     """
     print("Compare LK & Hierarchical LK")
+    im1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
+    im1 = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    im1 = cv2.resize(im1, (0, 0), fx=.5, fy=0.5)
+    t = np.array([[1, 0, -0.2],
+                  [0, 1, -0.1],
+                  [0, 0, 1]], dtype=np.float64)
+    im2 = cv2.warpPerspective(im1, t, (im1.shape[1], im1.shape[0]))
 
+    pts, uv = opticalFlow(im1.astype(np.float64), im2.astype(np.float64), step_size=20, win_size=5)
+
+    ans = opticalFlowPyrLK(im1.astype(np.float64), im2.astype(np.float64), 4, 20, 5)
+    ptspyr = np.array([])
+    uvpyr = np.array([])
+    for i in range(ans.shape[0]):
+        for j in range(ans.shape[1]):
+            if ans[i][j][1] != 0 and ans[i][j][0] != 0:
+                uvpyr = np.append(uvpyr, ans[i][j][0])
+                uvpyr = np.append(uvpyr, ans[i][j][1])
+                ptspyr = np.append(ptspyr, j)
+                ptspyr = np.append(ptspyr, i)
+    ptspyr = ptspyr.reshape(int(ptspyr.shape[0] / 2), 2)
+    uvpyr = uvpyr.reshape(int(uvpyr.shape[0] / 2), 2)
+    if len(im2.shape) == 2:
+        f, ax = plt.subplots(3, 1, figsize=(25, 35))
+        # ax[0].set_title('reg LK', fontsize=20)
+        ax[0].imshow(im2, cmap="gray")
+        ax[0].quiver(pts[:, 0], pts[:, 1], uv[:, 0], uv[:, 1], color='r')
+        # ax[1].set_title('Pyr LK', fontsize=20)
+        ax[1].imshow(im2, cmap="gray")
+        ax[1].quiver(ptspyr[:, 0], ptspyr[:, 1], uvpyr[:, 0], uvpyr[:, 1], color='r')
+        # ax[2].set_title('overlap', fontsize=20)
+        ax[2].imshow(im2, cmap="gray")
+    else:
+        f, ax = plt.subplots(3, 1, figsize=(25, 35))
+        # ax[0].set_title('reg LK', loc='left', fontsize=35)
+        ax[0].imshow(im2)
+        ax[0].quiver(pts[:, 0], pts[:, 1], uv[:, 0], uv[:, 1], color='r')
+        # ax[1].set_title('Pyr LK', fontsize=35)
+        ax[1].imshow(im2)
+        ax[1].quiver(ptspyr[:, 0], ptspyr[:, 1], uvpyr[:, 0], uvpyr[:, 1], color='r')
+        # ax[2].set_title('overlap', fontsize=35)
+        ax[2].imshow(im2)
+
+    ax[2].quiver(pts[:, 0], pts[:, 1], uv[:, 0], uv[:, 1], color='r')
+    ax[2].quiver(ptspyr[:, 0], ptspyr[:, 1], uvpyr[:, 0], uvpyr[:, 1], color='y')
+    f.tight_layout()
+    plt.show()
     pass
 
 
@@ -184,9 +230,9 @@ def main():
 
     img_path = 'input/boxMan .jpg'
     # lkDemo(img_path)
-    hierarchicalkDemo(img_path)
+    # hierarchicalkDemo(img_path)
     # compareLK(img_path)
-    #
+    translationlkdemo(img_path)
     # imageWarpingDemo(img_path)
     #
     # pyrGaussianDemo('input/pyr_bit.jpg')

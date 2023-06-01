@@ -172,6 +172,13 @@ def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Translation.
     :return: Translation matrix by LK.
     """
+    lk_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+    features1 = cv2.goodFeaturesToTrack(im1, maxCorners=100, qualityLevel=0.01, minDistance=8)
+    features2, status, _ = cv2.calcOpticalFlowPyrLK(im1, im2, features1, None, **lk_params)
+    good_features1 = features1[status == 1]
+    good_features2 = features2[status == 1]
+    translation = np.mean(good_features2 - good_features1, axis=0)
+    return translation
     pass
 
 
@@ -181,6 +188,14 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by LK.
     """
+    lk_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+    features1 = cv2.goodFeaturesToTrack(im1, maxCorners=100, qualityLevel=0.01, minDistance=8)
+    features2, status, _ = cv2.calcOpticalFlowPyrLK(im1, im2, features1, None, **lk_params)
+    good_features1 = features1[status == 1]
+    good_features2 = features2[status == 1]
+    M, _ = cv2.estimateAffinePartial2D(good_features1, good_features2)
+    translation = M[:, 2]
+    return translation
     pass
 
 
@@ -190,6 +205,9 @@ def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Translation.
     :return: Translation matrix by correlation.
     """
+    corr = cv2.matchTemplate(im1, im2, cv2.TM_CCORR_NORMED)
+    _, _, _, translation = cv2.minMaxLoc(corr)
+    return translation
     pass
 
 
@@ -199,6 +217,11 @@ def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by correlation.
     """
+    corr = cv2.matchTemplate(im1, im2, cv2.TM_CCORR_NORMED)
+    _, _, _, top_left = cv2.minMaxLoc(corr)
+    rotation = np.arccos(top_left[0]) * 180 / np.pi
+    translation = top_left[1]
+    return np.array([translation, rotation])
     pass
 
 
@@ -211,6 +234,13 @@ def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
     :return: warp image 2 according to T and display both image1
     and the wrapped version of the image2 in the same figure.
     """
+    rows, cols = im1.shape[:2]
+    warped = cv2.warpPerspective(im2, T, (cols, rows))
+    result = np.hstack((im1, warped))
+    cv2.imshow("Warped Images", result)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    return warped
     pass
 
 
