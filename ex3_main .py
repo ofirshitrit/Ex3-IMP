@@ -206,8 +206,8 @@ def pyrLaplacianDemo(img_path):
 
 
 def blendDemo():
-    im1 = cv2.cvtColor(cv2.imread('input/sunset.jpg'), cv2.COLOR_BGR2RGB) / 255
-    im2 = cv2.cvtColor(cv2.imread('input/cat.jpg'), cv2.COLOR_BGR2RGB) / 255
+    im1 = cv2.cvtColor(cv2.imread('input/sunset .jpg'), cv2.COLOR_BGR2RGB) / 255
+    im2 = cv2.cvtColor(cv2.imread('input/cat .jpg'), cv2.COLOR_BGR2RGB) / 255
     mask = cv2.cvtColor(cv2.imread('input/mask_cat.jpg'), cv2.COLOR_BGR2RGB) / 255
 
     n_blend, im_blend = pyrBlend(im1, im2, mask, 4)
@@ -232,12 +232,12 @@ def main():
     # lkDemo(img_path)
     # hierarchicalkDemo(img_path)
     # compareLK(img_path)
-    translationlkdemo(img_path)
+    # translationlkdemo(img_path)
     # imageWarpingDemo(img_path)
     #
     # pyrGaussianDemo('input/pyr_bit.jpg')
     # pyrLaplacianDemo('input/pyr_bit.jpg')
-    # blendDemo()
+    blendDemo()
 
 
 if __name__ == '__main__':

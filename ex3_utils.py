@@ -1,3 +1,4 @@
+import gc
 import sys
 from typing import List
 from scipy.ndimage import convolve
@@ -256,6 +257,16 @@ def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :param levels: Pyramid depth
     :return: Gaussian pyramid (list of images)
     """
+    # Create a list to hold all levels of the pyramid
+    G = img.copy()
+    gp = [G]
+
+    # Apply Gaussian Blur and downsample
+    for i in range(levels):
+        G = cv2.pyrDown(G)
+        gp.append(G)
+
+    return gp
     pass
 
 
@@ -266,27 +277,83 @@ def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :param levels: Pyramid depth
     :return: Laplacian Pyramid (list of images)
     """
-    pass
-
+    gaus_kernel = cv2.getGaussianKernel(5, -1)
+    gaus_kernel = np.multiply(gaus_kernel, gaus_kernel.transpose()) * 4.
+    gaus_pyr = gaussianPyr(img, levels)
+    lap_pyr = []
+    for i in range(levels - 1):
+        gau_expand = gaussExpand(gaus_pyr[i + 1], gaus_kernel)
+        gau_expand = gau_expand[:gaus_pyr[i].shape[0], :gaus_pyr[i].shape[1]]
+        lap = gaus_pyr[i] - gau_expand
+        lap_pyr.append(lap)
+    lap_pyr.append(gaus_pyr[levels - 1])  # Append the last level
+    return lap_pyr
 
 def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
     """
-    Restores the original image from a laplacian pyramid
+    Resotrs the original image from a laplacian pyramid
     :param lap_pyr: Laplacian Pyramid
     :return: Original image
     """
-    pass
+    gaus_kernel = cv2.getGaussianKernel(5, -1)
+    gaus_kernel = np.multiply(gaus_kernel, gaus_kernel.transpose()) * 4.
+    restored = lap_pyr[-1]
+    lap_pyr = lap_pyr[:-1]  # Remove the last element from lap_pyr
+    lap_pyr = lap_pyr[::-1]  # Reverse the lap_pyr list
+    for i in range(len(lap_pyr)):
+        expand = gaussExpand(restored, gaus_kernel)
+        expand = expand[:lap_pyr[i].shape[0], :lap_pyr[i].shape[1]]
+        restored = expand + lap_pyr[i]
+
+    return restored
+
+def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
+    """
+    Creates a Gaussian Pyramid
+    :param img: Original image
+    :param levels: Pyramid depth
+    :return: Gaussian pyramid (list of images)
+    """
+    img_copy = img.copy()
+    gaussian_kernel = cv2.getGaussianKernel(5, -1)
+    gaussian_kernel = np.multiply(gaussian_kernel, gaussian_kernel.transpose())
+    gaus = [img_copy]
+    for i in range(1, levels):
+        img_copy = cv2.filter2D(img_copy, -1, gaussian_kernel)
+        img_copy = img_copy[::2, ::2]
+        gaus.append(img_copy)
+    return gaus
 
 
-def pyrBlend(img_1: np.ndarray, img_2: np.ndarray,
-             mask: np.ndarray, levels: int) -> (np.ndarray, np.ndarray):
+
+def gaussExpand(img: np.ndarray, gs_k: np.ndarray) -> np.ndarray:
+    """
+    Expands a Gaussian pyramid level one step up
+    :param img: Pyramid image at a certain level
+    :param gs_k: The kernel to use in expanding
+    :return: The expanded level
+    """
+    G = np.zeros(img.shape, dtype=np.float64)
+    G = cv2.resize(G, (img.shape[1] * 2, img.shape[0] * 2))
+    G[::2, ::2] = img
+    return cv2.filter2D(G, -1, gs_k)
+
+def pyrBlend(img_1: np.ndarray, img_2: np.ndarray, mask: np.ndarray, levels: int) -> (np.ndarray, np.ndarray):
     """
     Blends two images using PyramidBlend method
     :param img_1: Image 1
     :param img_2: Image 2
     :param mask: Blend mask
     :param levels: Pyramid depth
-    :return: (Naive blend, Blended Image)
+    :return: Blended Image
     """
-    pass
+    lap_img_1 = laplaceianReduce(img_1, levels)
+    lap_img_2 = laplaceianReduce(img_2, levels)
+    gau_mask = gaussianPyr(mask, levels)
+    naive_blend = img_1*mask + (1 - mask) * img_2
+    lap_bend = []
+    for i in range(levels):
+        lap_bend.append(gau_mask[i] * lap_img_1[i] + (1 - gau_mask[i]) * lap_img_2[i])
+    out = laplaceianExpand(lap_bend)
+    return naive_blend, out
 
